@@ -22,8 +22,8 @@ class Album(Base):
 
     id = Column(Integer, primary_key=True)
     name = Column(String)
-    genre_01 = Column(String)
-    genre_02 = Column(String)
+    genre = Column(String)
+    # genre_02 = Column(String)
     total_score = Column(Float)
     nb_votes = Column(Integer)
     min_score = Column(Float)
@@ -39,8 +39,7 @@ class Album(Base):
             ALBUM Object
             id: {}
             name: {}
-            genre_01: {}
-            genre_02: {}
+            genre: {}
             total_score: {}
             nb_votes: {}
             min_score: {}
@@ -52,8 +51,7 @@ class Album(Base):
             """.format(
                 self.id,
                 self.name,
-                self.genre_01,
-                self.genre_02,
+                self.genre,
                 self.total_score,
                 self.nb_votes,
                 self.min_score,
@@ -70,8 +68,8 @@ class Album(Base):
         values = [
             self.id,
             self.name,
-            self.genre_01,
-            self.genre_02,
+            self.genre,
+            # self.genre_02,
             self.total_score,
             self.nb_votes,
             self.min_score,
