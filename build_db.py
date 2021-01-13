@@ -17,21 +17,30 @@ class User(Base):
     name = Column(String)
     top_size = Column(Integer)
 
+
+class Genre(Base):
+    __tablename__ = 'genres'
+
+    id = Column(Integer, primary_key=True)
+    name = Column(String)
+
 class Album(Base):
     __tablename__ = 'albums'
 
     id = Column(Integer, primary_key=True)
     name = Column(String)
-    genre = Column(String)
-    # genre_02 = Column(String)
-    total_score = Column(Float)
-    nb_votes = Column(Integer)
-    min_score = Column(Float)
-    max_score = Column(Float)
-    average_score = Column(Float)
-    min_pos = Column(Integer)
-    max_pos = Column(Integer)
-    average_pos = Column(Float)
+    
+    genre_id = Column(Integer, ForeignKey('genres.id'))
+    genre = relationship("Genre", back_populates = "albums")
+
+    # total_score = Column(Float)
+    # nb_votes = Column(Integer)
+    # min_score = Column(Float)
+    # max_score = Column(Float)
+    # average_score = Column(Float)
+    # min_pos = Column(Integer)
+    # max_pos = Column(Integer)
+    # average_pos = Column(Float)
 
     def print_fields(self):
 
@@ -40,26 +49,10 @@ class Album(Base):
             id: {}
             name: {}
             genre: {}
-            total_score: {}
-            nb_votes: {}
-            min_score: {}
-            max_score: {}
-            average_score: {}
-            min_pos: {}
-            max_pos: {}
-            average_pos: {}
             """.format(
                 self.id,
                 self.name,
-                self.genre,
-                self.total_score,
-                self.nb_votes,
-                self.min_score,
-                self.max_score,
-                self.average_score,
-                self.min_pos,
-                self.max_pos,
-                self.average_pos
+                (self.genre.name if self.genre else None)
             )
         )
 
@@ -68,16 +61,7 @@ class Album(Base):
         values = [
             self.id,
             self.name,
-            self.genre,
-            # self.genre_02,
-            self.total_score,
-            self.nb_votes,
-            self.min_score,
-            self.max_score,
-            self.average_score,
-            self.min_pos,
-            self.max_pos,
-            self.average_pos
+            (self.genre.name if self.genre else None)
         ]
         return values
 
@@ -102,13 +86,17 @@ class Entry(Base):
             self.id,
             self.user.name,
             self.name,
+            (self.album.name if self.album else None),
             self.position,
             self.score
         ]
         return values
         
+# define all back-propagated relationships
 User.entries = relationship("Entry", back_populates = "user")
 Album.entries = relationship("Entry", back_populates = "album")
+Genre.albums = relationship("Album", back_populates = "genre")
+
 
 def create_schema():
 
@@ -117,4 +105,3 @@ def create_schema():
 if __name__ == "__main__":
 
     create_schema()
-    # print("safe")

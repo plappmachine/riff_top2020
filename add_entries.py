@@ -12,12 +12,6 @@ output_excelpath = "top2020_entries.xlsx"
 Session = sessionmaker(bind=engine)
 session = Session()
 
-def load_worksheet():
-
-    wb = opx.load_workbook(input_excelpath)
-    entries = wb['entries']
-
-    return entries, wb
 
 def add_user_entry(raw_entry):
 
@@ -47,17 +41,18 @@ def add_user_entry(raw_entry):
         print('Entry Score: {}'.format(entry_score))
         
         # create Entry db object if does not already exist
-        entry_obj = session.query(Entry).filter(Entry.name == entry_name).first()
+        entry_obj = session.query(Entry).filter(Entry.user == user_obj, Entry.name == entry_name).first()
         if entry_obj is None:
             entry_obj = Entry(
                 user = user_obj,
                 name = entry_name
+                # position = position,
+                # score = entry_score
             )
             session.add(entry_obj)
         
         entry_obj.position = position
         entry_obj.score = entry_score
-
 
 def score(position, top_size):
 
@@ -72,6 +67,7 @@ def export_linear_entries():
         'id',
         'user',
         'entry_name',
+        'album_name',
         'position',
         'score'
     ]
@@ -84,7 +80,8 @@ def export_linear_entries():
 
 def main():
 
-    entries, wb = load_worksheet()
+    wb = opx.load_workbook(input_excelpath)
+    entries = wb['entries']
 
     for raw_entry in entries.rows:
         add_user_entry(raw_entry)
