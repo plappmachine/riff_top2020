@@ -1,8 +1,7 @@
 Pipfile.lock
-*.xlsx
-*.db
 
-master_data/*
+history/*
+visuals/*
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
