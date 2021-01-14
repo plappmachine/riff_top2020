@@ -25,6 +25,8 @@ def compute_all_stats():
    album_results = format_album_results(album_results)
    album_results.to_sql('album_stats', engine, if_exists='replace')
 
+   genre_stats = compute_genre_stats(album_results)
+
    full_entries = extend_entries(entries, album_results)
    full_entries = compute_entry_stats(full_entries)
    full_entries.to_sql('entry_stats', engine, if_exists='replace')
@@ -35,6 +37,7 @@ def compute_all_stats():
    writer = pd.ExcelWriter(results_excelpath)
    album_results.to_excel(writer, sheet_name='album_results')
    full_entries.to_excel(writer, sheet_name='full_entries')
+   genre_stats.to_excel(writer, sheet_name='genre_stats')
    user_genres.to_excel(writer, sheet_name='user_genres')
    user_edgyness.to_excel(writer, sheet_name='user_edgyness')
 
@@ -73,10 +76,15 @@ def format_entries(entries):
 
 def build_album_stats(entries):
 
-   album_stats = pd.pivot_table(entries, index = ['genre_id','genre','album_id','album'], values = ['score','position'], aggfunc=['count','sum','mean','min','max'])
+   aggfunc = {
+      'position': ['mean','min','max'],
+      'score': ['count','sum','mean','max','min']
+   }
 
-   album_ranking = album_stats.rank(method='dense',ascending=False)[('sum','score')]
-   album_genre_ranking = album_stats.groupby('genre').rank(method='dense',ascending=False)[('sum','score')]
+   album_stats = pd.pivot_table(entries, index = ['genre_id','genre','album_id','album'], values = ['score','position'], aggfunc=aggfunc)
+
+   album_ranking = album_stats.rank(method='dense',ascending=False)[('score','sum')]
+   album_genre_ranking = album_stats.groupby('genre_id').rank(method='dense',ascending=False)[('score','sum')]
 
    album_results = pd.merge(album_stats, album_ranking, left_index=True, right_index=True)
    album_results = pd.merge(album_results, album_genre_ranking, left_index=True, right_index=True)
@@ -90,27 +98,27 @@ def format_album_results(album_results):
    album_results.columns = album_results.columns.map('|'.join).str.strip('|')
 
    map = {
-      'sum_y|score':'rank',
+      'score_y|sum':'rank',
       'album_id':'album_id',
       'album':'album',
-      'sum|score':'genre_rank',
+      'score|sum':'genre_rank',
       'genre_id':'genre_id',
       'genre':'genre',
-      'count|score':'nb_votes',
-      'sum_x|score':'total_score',
-      'mean|score':'mean_score',
-      'max|score':'highest_score',
-      'min|score':'lowest_score',
-      'mean|position':'mean_position',
-      'min|position':'highest_position',
-      'max|position':'lowest_position'
+      'score_x|count':'nb_votes',
+      'score_x|sum':'total_score',
+      'score_x|mean':'mean_score',
+      'score_x|max':'highest_score',
+      'score_x|min':'lowest_score',
+      'position|mean':'mean_position',
+      'position|min':'highest_position',
+      'position|max':'lowest_position'
    }
-   
+
    album_results = album_results.reindex(columns=map.keys())
 
    drop_cols = (x for x in album_results.columns if x not in map.keys())
    album_results.drop(drop_cols, axis=1, inplace=True)
-   
+
    album_results.rename(map, axis=1, inplace=True)
 
    album_results.set_index('album_id', inplace=True, drop=True)
@@ -118,6 +126,15 @@ def format_album_results(album_results):
    album_results.sort_values('rank', inplace=True)
 
    return album_results
+
+def compute_genre_stats(df):
+
+    genre_stats = pd.pivot_table(df, index=['genre'], values=['nb_votes','total_score'], aggfunc=['sum'])
+    genre_stats.sort_values(('sum','nb_votes'), ascending=False, inplace=True)
+
+    genre_stats['weight'] = genre_stats[('sum','total_score')] * 100.0 / genre_stats[('sum','total_score')].sum()
+
+    return genre_stats
 
 def extend_entries(entries, album_results):
 
@@ -150,23 +167,30 @@ def extend_entries(entries, album_results):
 
     return full_entries
 
-def compute_entry_stats(full_entries):
+def compute_entry_stats(df):
 
-    full_entries['pop_score'] = full_entries['score'] * full_entries['total_score'] / 1000
-    full_entries['edgyness'] = full_entries['top_size'] / full_entries['pop_score']
+   df['pop_score'] = df['score'] * df['total_score'] / 1000
+   # idea for a future implementation
+   # df['pop_score'] = df['score'] * ( df['total_score'] - df['total_score'].quantile(q=0.666) ) / 1000
+   df['edgyness'] = df['top_size'] / df['pop_score']
 
-    full_entries.sort_values('entry_id', inplace=True)
+   df.sort_values('entry_id', inplace=True)
 
-    return full_entries
+   return df
 
 def compute_user_stats(full_entries):
     
-    user_genres = pd.pivot_table(full_entries, index=['name'], columns=['genre'], values=['score'], aggfunc=['sum'])
-    user_edgyness = pd.pivot_table(full_entries, index = ['name'], values=['pop_score','edgyness'], aggfunc=['sum','mean'])
+   user_genres = pd.pivot_table(full_entries, index=['name'], columns=['genre'], values=['score'], aggfunc=['sum'])
 
-    user_edgyness.sort_values(('mean','edgyness'), ascending=False, inplace=True)
+   aggfunc = {
+      'pop_score': 'sum',
+      'edgyness': 'mean'
+   }
+   user_edgyness = pd.pivot_table(full_entries, index = ['name'], values=['pop_score','edgyness'], aggfunc=aggfunc)
 
-    return user_genres,user_edgyness
+   user_edgyness.sort_values(('edgyness'), ascending=False, inplace=True)
+
+   return user_genres,user_edgyness
 
 if __name__ == "__main__":
 
