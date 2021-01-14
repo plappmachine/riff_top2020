@@ -133,4 +133,95 @@ If you want to test out, modify or scrutinize how all metrics are built, you can
 
 Here is a definition  of all metrics used in the code :
 
-[Untitled](https://www.notion.so/ad9087e0d25949a2862d3a94debd60bb)
+## user.top_size
+
+The number of albums a User provided through the poll. Can go from 3 to 30
+
+## entry.position
+
+Position of an album in a given User's individual top : 
+- position = 1 is the best album of 2020 according to that User
+- position = (top_size) is the User's least preferred album
+
+## entry.score
+
+Numerical score of an entry, depending on the Position the User gave in their individual top.
+
+Depends on both Position and Top Size : 
+- album number 1 (position = 1) always gains 30 points
+- last album (position = top_size) always gains 5 points
+- all albums between the first and last in a User's top gains a number of points that linearly decreases from 30 to 5
+
+## album.total_score
+
+Total number of points gained by an album over the whole poll. It is the sum of all Entry Scores for entries referring to that album.
+
+## album_stats : mean, highest and lowest position
+
+Average, min and max values of Entry Positions for all entries referring to that album
+
+## album_stats : mean highest and lowest score
+
+Average, min and max values of Entry Scores for all entries referring to that album
+
+## album_stats.rank
+
+Rank of the album in the final tier list.
+- Album Ranked no 1 is the Album with the highest Album Score
+- lowest ranked albums are the ones with the lowest Album Scores
+Albums with the same value of Album Score are on the same Rank
+
+## album_stats.genre_rank
+
+Rank of the Album within its musical genre. E.G :
+Album with genre 'Thrash Metal' and genre_rank = 1 is the highest Album Score of all albums who have genre = 'Thrash Metal'
+
+## entry_stats.pop_score
+
+Multiplication of the Entry's Score with the entry's Album's score, scaled out to a factor 1000. 
+
+**pop_score = (entry.score)*(entry.album.total_score)/1000**
+
+This metric is meant to see how much the vote of this entry is 'popular' within the respondent population : 
+
+- the more popular the entry's album is, ie, the highest Album Score, the highest the pop_score
+- the more the User values this album, ie, the highest the Entry Score, the highest goes the pop_score as well
+
+Thus pop_score indicates how much an entry is close to the general group's "tastes" in regard to that album. 
+
+(the scaling factor 1000 is arbitrary ; in practice our polling gave about 1150 albums so the scaling factor is pretty close, for readability)
+
+## entry_stats.edgyness
+
+Defined as the inverse of the Entry's Popularity Score multiplied by the Entry's Users' Top Size.
+
+**edgyness = top_size / entry.pop_score**
+
+Conversely to the pop_score, this metric gives a sense of how much an entry is 'niche' : the less popular the album is, and the lowest position it has, the greater the Edgyness.
+
+The factor with top_size is here to take into account the fact that users who have a longer top list have more "merit" to dig a lot of niche albums and put them at the forefront of their list.
+
+## user_genres
+
+It's a TCD giving, for each User, the number of points voted by genre, to see the 'repartition of tastes' of each User : who specializes in one or two genres, who is more eclectic etc etc
+
+## user.pop_score
+
+Sum(entry.pop_score) for a given User.
+
+When summing up all Popularity Scores for all Entries of a given User, this basically gives the orthogonal projection of this User's top list against the full ranked list of all albums, thus giving a sense of how much this User's tastes are "mainstream" relative to the rest of the group.
+
+The top 2 User Pop Scores gain the official title of 'Prophets' as they had the best guess of the actual final ranking.
+
+## user.egdyness
+
+Average(entry.edgyness) for all entries of a given User.
+
+This indicateor rewards Users who, throughout all their top list, have voted against the main tenedencies of the group. The top 3 highest Edgyness Users gain the official title of 'Edgelords'.
+
+## genre_stats
+
+a TCD giving the most popular genres by aggregating :
+- the count of all votes given to albums in each genre
+- the total sum of points for each genre
+- the proportion of points, ie the 'weight' of a genre
